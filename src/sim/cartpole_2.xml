@@ -1,0 +1,52 @@
+<!--
+  Upright 2-link cartpole. Joint angle 0 is upright.
+  Angles in this file are radians. One motor: ctrl is cart force in newtons.
+  No contacts. The rail is the slide-joint range.
+  Each link is a uniform rod: mass 0.1 kg, length 0.5 m,
+  Iyy about the center = m L^2 / 12.
+-->
+<mujoco model="cartpole_2">
+  <compiler angle="radian"/>
+  <option timestep="0.001" gravity="0 0 -9.81" integrator="Euler"/>
+
+  <visual>
+    <global azimuth="90" elevation="-15"/>
+  </visual>
+
+  <default>
+    <joint damping="0"/>
+    <geom contype="0" conaffinity="0"/>
+  </default>
+
+  <worldbody>
+    <light pos="0 -1 2" dir="0 0.4 -1" directional="true"/>
+    <geom name="floor" type="plane" size="2 0.6 0.02" pos="0 0 -0.1" rgba="0.92 0.92 0.92 1"/>
+    <geom name="rail" type="capsule" fromto="-1.15 0 0 1.15 0 0" size="0.008" rgba="0.45 0.45 0.45 1"/>
+
+    <body name="cart" pos="0 0 0">
+      <joint name="slide" type="slide" axis="1 0 0" limited="true" range="-1 1"/>
+      <inertial pos="0 0 0" mass="1" diaginertia="0.00296667 0.00416667 0.00546667"/>
+      <geom name="cart" type="box" size="0.1 0.08 0.05" rgba="0.25 0.25 0.28 1"/>
+
+      <body name="link_1" pos="0 0 0">
+        <joint name="hinge_1" type="hinge" axis="0 1 0"/>
+        <inertial pos="0 0 0.25" mass="0.1" diaginertia="0.002083333 0.002083333 0.00001"/>
+        <geom name="link_1" type="capsule" fromto="0 0 0 0 0 0.5" size="0.02" rgba="0.85 0.35 0.15 1"/>
+
+        <body name="link_2" pos="0 0 0.5">
+          <joint name="hinge_2" type="hinge" axis="0 1 0"/>
+          <inertial pos="0 0 0.25" mass="0.1" diaginertia="0.002083333 0.002083333 0.00001"/>
+          <geom name="link_2" type="capsule" fromto="0 0 0 0 0 0.5" size="0.02" rgba="0.2 0.4 0.75 1"/>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <motor name="cart_force" joint="slide" gear="1"/>
+  </actuator>
+
+  <keyframe>
+    <key name="upright" qpos="0 0 0" qvel="0 0 0"/>
+  </keyframe>
+</mujoco>

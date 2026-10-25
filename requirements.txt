@@ -1,0 +1,3 @@
+# Phase 1 only. Later packages are listed in docs/PROGRESS.md.
+mujoco==3.17.0
+numpy==2.5.4
