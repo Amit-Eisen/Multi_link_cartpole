@@ -1,3 +1,5 @@
-# Phase 1 only. Later packages are listed in docs/PROGRESS.md.
+# Plant plus the open-loop runner. Later packages are listed in docs/PROGRESS.md.
 mujoco==3.17.0
 numpy==2.5.4
+matplotlib==3.10.7
+pyyaml==6.0.3

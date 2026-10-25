@@ -12,8 +12,10 @@ from sim.plant import Plant
 def _roll(plant: Plant, force: float, duration: float):
     steps = int(round(duration / plant.timestep))
     state = plant.state()
+
     for _ in range(steps):
         state = plant.step(force)
+
     return state
 
 

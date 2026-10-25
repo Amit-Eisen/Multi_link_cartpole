@@ -38,6 +38,7 @@ class Plant:
         self.data = mujoco.MjData(self.model)
         actuator_id = self._object_id(mujoco.mjtObj.mjOBJ_ACTUATOR, ACTUATOR_NAME)
         self._ctrl_index = int(self.model.actuator_ctrladr[actuator_id])
+
         if self.model.nu != 1:
             raise ValueError(f"{self.model_path.name} must have one actuator, got {self.model.nu}")
 
@@ -47,10 +48,12 @@ class Plant:
 
     def body_mass(self, name: str) -> float:
         body_id = self._object_id(mujoco.mjtObj.mjOBJ_BODY, name)
+
         return float(self.model.body_mass[body_id])
 
     def qpos_index(self, joint: str) -> int:
         joint_id = self._object_id(mujoco.mjtObj.mjOBJ_JOINT, joint)
+
         return int(self.model.jnt_qposadr[joint_id])
 
     def reset(
@@ -59,26 +62,33 @@ class Plant:
         qvel: np.ndarray | None = None,
     ) -> State:
         mujoco.mj_resetData(self.model, self.data)
+
         if qpos is not None:
             qpos = np.asarray(qpos, dtype=float)
             if qpos.shape != (self.model.nq,):
                 raise ValueError(f"qpos shape {qpos.shape} != ({self.model.nq},)")
             self.data.qpos[:] = qpos
+
         if qvel is not None:
             qvel = np.asarray(qvel, dtype=float)
             if qvel.shape != (self.model.nv,):
                 raise ValueError(f"qvel shape {qvel.shape} != ({self.model.nv},)")
             self.data.qvel[:] = qvel
+
         mujoco.mj_forward(self.model, self.data)
+
         return self.state()
 
     def step(self, force: float) -> State:
         """Advance one physics step. ``force`` is cart force in newtons."""
         force = float(force)
+
         if not np.isfinite(force):
             raise ValueError("force must be finite")
+
         self.data.ctrl[self._ctrl_index] = force
         mujoco.mj_step(self.model, self.data)
+
         return self.state()
 
     def state(self) -> State:
@@ -90,6 +100,8 @@ class Plant:
 
     def _object_id(self, obj_type: mujoco.mjtObj, name: str) -> int:
         obj_id = mujoco.mj_name2id(self.model, obj_type, name)
+
         if obj_id < 0:
             raise KeyError(f"no {mujoco.mjtObj(obj_type).name} named {name!r} in {self.model_path.name}")
+
         return int(obj_id)
