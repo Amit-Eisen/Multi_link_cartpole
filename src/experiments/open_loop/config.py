@@ -1,11 +1,8 @@
 """Load an open-loop episode from YAML."""
 
 from __future__ import annotations
-
 from pathlib import Path
-
 import yaml
-
 from ..runner import Experiment
 
 

@@ -4,13 +4,10 @@ A policy is ``state -> force``. The runner does not know which controller it is.
 """
 
 from __future__ import annotations
-
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-
 import numpy as np
-
 from sim.plant import Plant, State
 
 Policy = Callable[[State], float]

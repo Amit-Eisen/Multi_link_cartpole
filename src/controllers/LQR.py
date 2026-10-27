@@ -1,7 +1,7 @@
-"""Continuous infinite-horizon LQR gain.
+"""Continuous infinite-horizon LQR gain, and the policy that applies it.
 
-The plant is not here. Pass the linear model and the weights. The control law
-that uses this gain is ``u = -K x``, applied later by the experiment runner.
+Pass ``A``, ``B``, ``Q``, and ``R`` to :func:`lqr_gain`. The plant linearization
+that produces ``A`` and ``B`` lives next to the plant, not here.
 """
 
 from __future__ import annotations
@@ -10,6 +10,8 @@ from dataclasses import dataclass
 
 import numpy as np
 from scipy.linalg import solve_continuous_are
+
+from sim.plant import State
 
 
 @dataclass(frozen=True)
@@ -52,6 +54,22 @@ def lqr_gain(A: np.ndarray, B: np.ndarray, Q: np.ndarray, R: np.ndarray) -> LQRG
     gain = np.linalg.solve(input_weight, input_matrix.T @ riccati)
 
     return LQRGain(K=gain, P=riccati)
+
+
+class LQR:
+    """One force from full-state feedback: ``u = -K [qpos, qvel]``."""
+
+    def __init__(self, K: np.ndarray) -> None:
+        self.K = np.atleast_2d(np.asarray(K, dtype=float))
+        if self.K.shape[0] != 1:
+            raise ValueError("K must have one row")
+
+    def __call__(self, state: State) -> float:
+        x = np.concatenate((state.qpos, state.qvel))
+        if x.shape != (self.K.shape[1],):
+            raise ValueError(f"state length {x.shape[0]} does not match K columns {self.K.shape[1]}")
+        return float((-self.K @ x).item())
+
 
 def _symmetric(matrix: np.ndarray) -> np.ndarray:
     values = np.atleast_2d(np.asarray(matrix, dtype=float))

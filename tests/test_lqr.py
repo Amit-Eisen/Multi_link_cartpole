@@ -3,7 +3,8 @@
 from __future__ import annotations
 import unittest
 import numpy as np
-from controllers.LQR import lqr_gain
+from controllers.lqr import LQR, lqr_gain
+from sim.plant import State
 
 
 class LQRGainTest(unittest.TestCase):
@@ -25,6 +26,11 @@ class LQRGainTest(unittest.TestCase):
 
         np.testing.assert_allclose(gain.K, [[1.0, np.sqrt(3.0)]], atol=1e-10)
         self.assertEqual(gain.K.shape, (1, 2))
+
+    def test_policy_returns_one_force(self) -> None:
+        state = State(time=0.0, qpos=np.array([0.1, 0.0, 0.0]), qvel=np.zeros(3))
+        force = LQR([[2.0, 0.0, 0.0, 3.0, 0.0, 0.0]])(state)
+        self.assertAlmostEqual(force, -0.2)
 
 
 if __name__ == "__main__":
