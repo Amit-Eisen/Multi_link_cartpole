@@ -4,5 +4,6 @@ from __future__ import annotations
 
 from .constant import ConstantForce
 from .lqr import LQR, LQRGain, lqr_gain
+from .pid import PID
 
-__all__ = ["ConstantForce", "LQR", "LQRGain", "lqr_gain"]
+__all__ = ["ConstantForce", "LQR", "LQRGain", "PID", "lqr_gain"]
