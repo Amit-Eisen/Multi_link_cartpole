@@ -1,10 +1,8 @@
 # multi-link cartpole
 
-Upright multi-link cartpole in MuJoCo. One plant and one metric suite, first for classical control, later for RL.
+Upright cartpole in MuJoCo. Link count is a parameter, 1 to 5. Controllers so far: constant force, LQR, full-state PID.
 
-Upright is joint angle 0. MuJoCo owns the physics. A controller maps state to cart force and nothing else.
-
-Plan, metrics, and locked decisions: [docs/PROGRESS.md](docs/PROGRESS.md). Update that file when the work moves. This page is only how to run the repo.
+Upright is joint angle 0. MuJoCo owns the physics. A controller maps state to cart force. The motor limit is 50 N.
 
 ## Setup
 
@@ -17,53 +15,48 @@ pip install -r requirements.txt
 pip install -e . --no-deps
 ```
 
-Tests:
-
 ```
 python -m unittest discover -s tests
 ```
 
-## Scripts
+## Run
 
-Viewer. `--angle` is radians. The printout is degrees.
+Command-line angles are radians. Plots and the viewer print absolute link angles, the sum of the hinges out to that link. Controllers still use the relative joint coordinates.
+
+A missing `n_links` in a config means 2. `qpos` length is `n_links + 1`.
+
+Viewer:
 
 ```
-python scripts/view_plant.py --angle 0.1 --force 0
+python scripts/view_plant.py --links 3 --angle 0.1
 ```
 
-One open-loop run. Writes a log and a plot under `results/`. A missing `n_links` means 2. `qpos` length must be `n_links + 1`.
+Open loop. Writes a log and a plot under `results/`.
 
 ```
 python scripts/open_loop/run_open_loop.py --config configs/open_loop/fall.yaml
 ```
 
-LQR balance. The 2-link case is the default. `configs/lqr/balance_3.yaml` is the 3-link case. Plots show absolute link angles, the sum of the hinges out to that link. The controller still uses the relative joint coordinates.
+LQR. `--view` opens the window after the log is written. `balance.yaml` is 2 links, `balance_3.yaml` is 3.
 
 ```
 python scripts/lqr/run_lqr.py --config configs/lqr/balance.yaml --view
 python scripts/lqr/run_lqr.py --config configs/lqr/balance_3.yaml --view
 ```
 
-PID balance on the same 2-link initial state. The log stores the commanded force and the force the plant applied. The motor limit is 50 N for every controller.
+PID on the same 2-link initial state. Gains are pole placement, not the LQR gain. The log stores the commanded force and the force the plant applied.
 
 ```
 python scripts/pid/run_pid.py --config configs/pid/balance.yaml --view
 ```
 
-Viewer for any link count from 1 to 5:
-
-```
-python scripts/view_plant.py --links 3 --angle 0.1
-```
-
 ## Layout
 
 ```
-src/sim/            plant and MJCF
+src/sim/            plant, generated MJCF, upright linearization
 src/controllers/    state -> force
-src/experiments/    shared episode loop
+src/experiments/    episode loop, configs, settle check, plots
 configs/            numbers for a run
 scripts/            entry points
-results/            logs and plots
-docs/PROGRESS.md    plan and decisions
+results/            logs and plots, not committed
 ```
