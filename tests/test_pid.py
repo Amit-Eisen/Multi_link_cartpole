@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 
 import numpy as np
 
 from controllers.pid import PID
-from sim.plant import State
+from experiments.metrics import converged
+from experiments.pid.config import load_pid
+from experiments.runner import run
+from sim.plant import Plant, State
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class PIDTest(unittest.TestCase):
@@ -35,6 +41,15 @@ class PIDTest(unittest.TestCase):
         restarted = State(time=0.0, qpos=np.array([0.5, 0.0, 0.0]), qvel=np.zeros(3))
 
         self.assertAlmostEqual(pid(restarted), 0.0)
+
+    def test_two_link_balance_settles(self) -> None:
+        experiment, gain, ki, n_links = load_pid(ROOT / "configs" / "pid" / "balance.yaml")
+        plant = Plant(n_links=n_links)
+        trajectory = run(plant, PID(gain, ki=ki), experiment)
+        self.assertEqual(n_links, 2)
+        self.assertEqual(ki, 0.0)
+        self.assertTrue(converged(trajectory))
+        self.assertLessEqual(float(np.max(np.abs(trajectory.force))), plant.force_limit)
 
 
 if __name__ == "__main__":

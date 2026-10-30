@@ -16,6 +16,7 @@ from sim.model import MAX_LINKS, MIN_LINKS, cartpole_xml
 
 ACTUATOR_NAME = "cart_force"
 DEFAULT_MODEL = Path(__file__).with_name("cartpole_2.xml")
+FORCE_LIMIT = 50.0
 
 
 @dataclass(frozen=True)
@@ -34,7 +35,12 @@ class Plant:
     exposed for the viewer and for later linearization.
     """
 
-    def __init__(self, n_links: int | None = None, model_path: Path | None = None) -> None:
+    def __init__(
+        self,
+        n_links: int | None = None,
+        model_path: Path | None = None,
+        force_limit: float = FORCE_LIMIT,
+    ) -> None:
         if model_path is not None:
             self.model_path = Path(model_path)
             self.model = mujoco.MjModel.from_xml_path(str(self.model_path))
@@ -55,9 +61,15 @@ class Plant:
         self.data = mujoco.MjData(self.model)
         actuator_id = self._object_id(mujoco.mjtObj.mjOBJ_ACTUATOR, ACTUATOR_NAME)
         self._ctrl_index = int(self.model.actuator_ctrladr[actuator_id])
+        self.force_limit = float(force_limit)
+        self.command = 0.0
+        self.applied = 0.0
 
         if self.model.nu != 1:
             raise ValueError(f"{self.model_path.name} must have one actuator, got {self.model.nu}")
+
+        if self.force_limit <= 0.0 or not np.isfinite(self.force_limit):
+            raise ValueError("force_limit must be a positive finite number")
 
     @property
     def timestep(self) -> float:
@@ -101,13 +113,19 @@ class Plant:
         return self.state()
 
     def step(self, force: float) -> State:
-        """Advance one physics step. ``force`` is cart force in newtons."""
-        force = float(force)
+        """Advance one physics step. ``force`` is the commanded cart force, in newtons.
 
-        if not np.isfinite(force):
+        The applied force is clipped to ``±force_limit``. ``command`` keeps the
+        unclipped value.
+        """
+        command = float(force)
+
+        if not np.isfinite(command):
             raise ValueError("force must be finite")
 
-        self.data.ctrl[self._ctrl_index] = force
+        self.command = command
+        self.applied = float(np.clip(command, -self.force_limit, self.force_limit))
+        self.data.ctrl[self._ctrl_index] = self.applied
         mujoco.mj_step(self.model, self.data)
 
         return self.state()

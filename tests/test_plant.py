@@ -95,6 +95,17 @@ class PlantTest(unittest.TestCase):
         np.testing.assert_allclose(generated_state.qpos, stored_state.qpos, atol=1e-5)
         np.testing.assert_allclose(generated_state.qvel, stored_state.qvel, atol=1e-5)
 
+    def test_force_above_the_limit_is_clipped(self) -> None:
+        plant = Plant(force_limit=3.0)
+        plant.reset()
+        plant.step(10.0)
+        self.assertEqual(plant.command, 10.0)
+        self.assertEqual(plant.applied, 3.0)
+        self.assertEqual(float(plant.data.ctrl[plant._ctrl_index]), 3.0)
+        plant.step(-10.0)
+        self.assertEqual(plant.command, -10.0)
+        self.assertEqual(plant.applied, -3.0)
+
 
 if __name__ == "__main__":
     unittest.main()

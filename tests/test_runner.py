@@ -35,6 +35,7 @@ class RunnerTest(unittest.TestCase):
         trajectory = run(Plant(), ConstantForce(2.0), experiment)
         self.assertGreater(trajectory.qpos[-1, 0], 0.01)
         self.assertLess(trajectory.qpos[-1, 0], 1.0)
+        np.testing.assert_allclose(trajectory.command, 2.0)
         np.testing.assert_allclose(trajectory.force, 2.0)
 
     def test_same_experiment_matches(self) -> None:
@@ -68,10 +69,19 @@ class RunnerTest(unittest.TestCase):
             plot(trajectory, figure_path)
 
             with np.load(log_path) as loaded:
+                np.testing.assert_allclose(loaded["command"], trajectory.command)
                 np.testing.assert_allclose(loaded["force"], trajectory.force)
+                np.testing.assert_allclose(loaded["force_limit"], trajectory.force_limit)
                 np.testing.assert_allclose(loaded["qpos0"], trajectory.qpos[0])
 
             self.assertGreater(figure_path.stat().st_size, 0)
+
+    def test_log_keeps_the_command_when_the_plant_clips(self) -> None:
+        experiment = Experiment(name="push", qpos=(0.0, 0.0, 0.0), qvel=(0.0, 0.0, 0.0), duration=0.05)
+        trajectory = run(Plant(force_limit=1.0), ConstantForce(4.0), experiment)
+        np.testing.assert_allclose(trajectory.command, 4.0)
+        np.testing.assert_allclose(trajectory.force, 1.0)
+        self.assertEqual(trajectory.force_limit, 1.0)
 
 
 if __name__ == "__main__":

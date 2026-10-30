@@ -1,0 +1,9 @@
+name: balance
+n_links: 2
+qpos: [0.0, 0.25, -0.15]
+qvel: [0.0, 0.0, 0.0]
+duration: 15.0
+# Pole placement on the upright linear model: -2, -2.5, -3, -3.5, -4, -5.
+# Not the LQR gain. ki stays 0 until a force bias exists.
+k: [0.7274, 0.1104, 85.7832, 1.4322, 5.8880, 9.9983]
+ki: 0.0

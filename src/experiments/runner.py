@@ -28,12 +28,14 @@ class Experiment:
 
 @dataclass(frozen=True)
 class Trajectory:
-    """``force[k]`` is the input that produced ``qpos[k + 1]``."""
+    """``command[k]`` is the controller output. ``force[k]`` is what the plant applied."""
 
     time: np.ndarray
     qpos: np.ndarray
     qvel: np.ndarray
+    command: np.ndarray
     force: np.ndarray
+    force_limit: float
 
 
 def run(plant: Plant, policy: Policy, experiment: Experiment) -> Trajectory:
@@ -46,20 +48,28 @@ def run(plant: Plant, policy: Policy, experiment: Experiment) -> Trajectory:
     time = np.empty(steps + 1)
     qpos = np.empty((steps + 1, plant.model.nq))
     qvel = np.empty((steps + 1, plant.model.nv))
+    command = np.empty(steps)
     force = np.empty(steps)
     time[0] = state.time
     qpos[0] = state.qpos
     qvel[0] = state.qvel
 
     for k in range(steps):
-        command = float(policy(state))
-        force[k] = command
-        state = plant.step(command)
+        state = plant.step(float(policy(state)))
+        command[k] = plant.command
+        force[k] = plant.applied
         time[k + 1] = state.time
         qpos[k + 1] = state.qpos
         qvel[k + 1] = state.qvel
 
-    return Trajectory(time=time, qpos=qpos, qvel=qvel, force=force)
+    return Trajectory(
+        time=time,
+        qpos=qpos,
+        qvel=qvel,
+        command=command,
+        force=force,
+        force_limit=plant.force_limit,
+    )
 
 
 def save(trajectory: Trajectory, path: Path) -> None:
@@ -70,6 +80,8 @@ def save(trajectory: Trajectory, path: Path) -> None:
         time=trajectory.time,
         qpos=trajectory.qpos,
         qvel=trajectory.qvel,
+        command=trajectory.command,
         force=trajectory.force,
+        force_limit=np.array(trajectory.force_limit),
         qpos0=trajectory.qpos[0],
     )

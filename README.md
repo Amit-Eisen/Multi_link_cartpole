@@ -44,6 +44,12 @@ python scripts/lqr/run_lqr.py --config configs/lqr/balance.yaml --view
 python scripts/lqr/run_lqr.py --config configs/lqr/balance_3.yaml --view
 ```
 
+PID balance on the same 2-link initial state. The log stores the commanded force and the force the plant applied. The motor limit is 50 N for every controller.
+
+```
+python scripts/pid/run_pid.py --config configs/pid/balance.yaml --view
+```
+
 Viewer for any link count from 1 to 5:
 
 ```
