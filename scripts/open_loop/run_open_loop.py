@@ -18,8 +18,8 @@ def main() -> None:
     parser.add_argument("--out", type=Path, default=Path("results"))
     args = parser.parse_args()
 
-    experiment, force = load_open_loop(args.config)
-    trajectory = run(Plant(), ConstantForce(force), experiment)
+    experiment, force, n_links = load_open_loop(args.config)
+    trajectory = run(Plant(n_links=n_links), ConstantForce(force), experiment)
     stem = args.out / args.config.parent.name / experiment.name
     save(trajectory, stem.with_suffix(".npz"))
     plot(trajectory, stem.with_suffix(".png"))

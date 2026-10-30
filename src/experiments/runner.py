@@ -4,10 +4,13 @@ A policy is ``state -> force``. The runner does not know which controller it is.
 """
 
 from __future__ import annotations
+
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+
 import numpy as np
+
 from sim.plant import Plant, State
 
 Policy = Callable[[State], float]
@@ -61,6 +64,7 @@ def run(plant: Plant, policy: Policy, experiment: Experiment) -> Trajectory:
 
 def save(trajectory: Trajectory, path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+
     np.savez(
         path,
         time=trajectory.time,

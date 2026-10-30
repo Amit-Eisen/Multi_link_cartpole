@@ -1,15 +1,19 @@
 """Balance the upright plant with LQR."""
 
 from __future__ import annotations
+
 import argparse
 import time
 from pathlib import Path
+
 import mujoco.viewer
 import numpy as np
+
 from controllers.lqr import LQR, lqr_gain
 from experiments.lqr.config import load_lqr
 from experiments.plot import plot
 from experiments.runner import Experiment, run, save
+from sim.angles import absolute_link_angles
 from sim.linearize import linearize
 from sim.plant import Plant
 
@@ -21,8 +25,8 @@ def main() -> None:
     parser.add_argument("--view", action="store_true", help="open the MuJoCo window")
     args = parser.parse_args()
 
-    experiment, state_weight, input_weight = load_lqr(args.config)
-    plant = Plant()
+    experiment, state_weight, input_weight, n_links = load_lqr(args.config)
+    plant = Plant(n_links=n_links)
     model = linearize(plant)
     policy = LQR(lqr_gain(model.A, model.B, state_weight, input_weight).K)
     trajectory = run(plant, policy, experiment)
@@ -53,11 +57,9 @@ def play(plant: Plant, policy: LQR, experiment: Experiment) -> None:
                 state = plant.step(policy(state))
 
             if state.time >= next_print:
-                degrees = np.degrees(state.qpos[1:])
-                print(
-                    f"t={state.time:5.2f} s  x={state.qpos[0]:+.3f} m  "
-                    f"link1={degrees[0]:+6.1f} deg  link2={degrees[1]:+6.1f} deg"
-                )
+                degrees = np.degrees(absolute_link_angles(state.qpos))
+                links = "  ".join(f"link{i + 1}={angle:+6.1f} deg" for i, angle in enumerate(degrees))
+                print(f"t={state.time:5.2f} s  x={state.qpos[0]:+.3f} m  {links}")
                 next_print += 0.5
 
             viewer.sync()

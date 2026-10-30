@@ -61,13 +61,16 @@ class LQR:
 
     def __init__(self, K: np.ndarray) -> None:
         self.K = np.atleast_2d(np.asarray(K, dtype=float))
+
         if self.K.shape[0] != 1:
             raise ValueError("K must have one row")
 
     def __call__(self, state: State) -> float:
         x = np.concatenate((state.qpos, state.qvel))
+
         if x.shape != (self.K.shape[1],):
             raise ValueError(f"state length {x.shape[0]} does not match K columns {self.K.shape[1]}")
+
         return float((-self.K @ x).item())
 
 

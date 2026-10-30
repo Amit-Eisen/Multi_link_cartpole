@@ -19,12 +19,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class RunnerTest(unittest.TestCase):
     def test_zero_force_holds_and_log_shape_matches(self) -> None:
+        plant = Plant()
         experiment = Experiment(name="upright", qpos=(0.0, 0.0, 0.0), qvel=(0.0, 0.0, 0.0), duration=0.1)
-        trajectory = run(Plant(), ConstantForce(0.0), experiment)
-        steps = int(round(experiment.duration / Plant().timestep))
+        trajectory = run(plant, ConstantForce(0.0), experiment)
+        steps = int(round(experiment.duration / plant.timestep))
         self.assertEqual(len(trajectory.time), steps + 1)
         self.assertEqual(len(trajectory.force), steps)
-        self.assertEqual(trajectory.qpos.shape, (steps + 1, 3))
+        self.assertEqual(trajectory.qpos.shape, (steps + 1, plant.model.nq))
         np.testing.assert_allclose(trajectory.qpos, 0.0, atol=1e-8)
         np.testing.assert_allclose(trajectory.qvel, 0.0, atol=1e-8)
         np.testing.assert_allclose(trajectory.force, 0.0)
@@ -46,25 +47,30 @@ class RunnerTest(unittest.TestCase):
         np.testing.assert_allclose(first.force, second.force)
 
     def test_configs_load(self) -> None:
-        fall, fall_force = load_open_loop(ROOT / "configs" / "open_loop" / "fall.yaml")
-        push, push_force = load_open_loop(ROOT / "configs" / "open_loop" / "force_step.yaml")
+        fall, fall_force, fall_links = load_open_loop(ROOT / "configs" / "open_loop" / "fall.yaml")
+        push, push_force, push_links = load_open_loop(ROOT / "configs" / "open_loop" / "force_step.yaml")
         self.assertEqual(fall.qpos, (0.0, 0.05, 0.0))
         self.assertEqual(fall_force, 0.0)
+        self.assertEqual(fall_links, 2)
         self.assertEqual(push.qpos, (0.0, 0.0, 0.0))
         self.assertEqual(push_force, 2.0)
+        self.assertEqual(push_links, 2)
 
     def test_save_and_plot(self) -> None:
         experiment = Experiment(name="push", qpos=(0.0, 0.0, 0.0), qvel=(0.0, 0.0, 0.0), duration=0.05)
         trajectory = run(Plant(), ConstantForce(2.0), experiment)
+
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             log_path = root / "push.npz"
             figure_path = root / "push.png"
             save(trajectory, log_path)
             plot(trajectory, figure_path)
+
             with np.load(log_path) as loaded:
                 np.testing.assert_allclose(loaded["force"], trajectory.force)
                 np.testing.assert_allclose(loaded["qpos0"], trajectory.qpos[0])
+
             self.assertGreater(figure_path.stat().st_size, 0)
 
 

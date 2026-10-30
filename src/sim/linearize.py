@@ -5,9 +5,13 @@ State order is ``[qpos, qvel]``. The derivative is ``[qvel, qacc]``.
 """
 
 from __future__ import annotations
+
+from collections.abc import Callable
 from dataclasses import dataclass
+
 import mujoco
 import numpy as np
+
 from sim.plant import Plant
 
 
@@ -35,7 +39,7 @@ def linearize(plant: Plant, eps: float = 1e-6) -> LinearModel:
 
         return np.concatenate((data.qvel, data.qacc))
 
-    def column(assign) -> np.ndarray:
+    def column(assign: Callable[[float], None]) -> np.ndarray:
         assign(eps)
         plus = xdot()
         assign(-eps)
@@ -62,13 +66,16 @@ def linearize(plant: Plant, eps: float = 1e-6) -> LinearModel:
 
 
 def is_controllable(A: np.ndarray, B: np.ndarray) -> bool:
-    """Rank of ``[B, AB, ..., A^{n-1}B]`` equals the state size."""
+    """PBH test: ``[λI - A, B]`` has full rank at every eigenvalue of ``A``."""
+    matrix = np.asarray(A, dtype=complex)
+    control = np.asarray(B, dtype=complex)
+    size = matrix.shape[0]
+    eye = np.eye(size, dtype=complex)
 
-    blocks = [np.asarray(B, dtype=float)]
-    current = blocks[0]
+    for eigenvalue in np.linalg.eigvals(matrix):
+        pencil = np.hstack((eigenvalue * eye - matrix, control))
 
-    for _ in range(A.shape[0] - 1):
-        current = A @ current
-        blocks.append(current)
+        if np.linalg.matrix_rank(pencil, tol=1e-6) < size:
+            return False
 
-    return int(np.linalg.matrix_rank(np.hstack(blocks))) == A.shape[0]
+    return True

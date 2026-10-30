@@ -12,6 +12,8 @@ from pathlib import Path
 import mujoco
 import numpy as np
 
+from sim.model import MAX_LINKS, MIN_LINKS, cartpole_xml
+
 ACTUATOR_NAME = "cart_force"
 DEFAULT_MODEL = Path(__file__).with_name("cartpole_2.xml")
 
@@ -32,9 +34,24 @@ class Plant:
     exposed for the viewer and for later linearization.
     """
 
-    def __init__(self, model_path: Path | None = None) -> None:
-        self.model_path = Path(model_path) if model_path is not None else DEFAULT_MODEL
-        self.model = mujoco.MjModel.from_xml_path(str(self.model_path))
+    def __init__(self, n_links: int | None = None, model_path: Path | None = None) -> None:
+        if model_path is not None:
+            self.model_path = Path(model_path)
+            self.model = mujoco.MjModel.from_xml_path(str(self.model_path))
+            self.n_links = self._link_count()
+
+            if n_links is not None and n_links != self.n_links:
+                raise ValueError(f"n_links={n_links} but {self.model_path.name} has {self.n_links}")
+        else:
+            self.n_links = 2 if n_links is None else n_links
+
+            if self.n_links < MIN_LINKS or self.n_links > MAX_LINKS:
+                raise ValueError(f"n_links must be {MIN_LINKS}..{MAX_LINKS}, got {self.n_links}")
+
+            self.model_path = Path(f"cartpole_{self.n_links}.xml")
+            print(f"Loading model from {self.model_path}")
+            self.model = mujoco.MjModel.from_xml_string(cartpole_xml(self.n_links))
+
         self.data = mujoco.MjData(self.model)
         actuator_id = self._object_id(mujoco.mjtObj.mjOBJ_ACTUATOR, ACTUATOR_NAME)
         self._ctrl_index = int(self.model.actuator_ctrladr[actuator_id])
@@ -65,14 +82,18 @@ class Plant:
 
         if qpos is not None:
             qpos = np.asarray(qpos, dtype=float)
+
             if qpos.shape != (self.model.nq,):
                 raise ValueError(f"qpos shape {qpos.shape} != ({self.model.nq},)")
+
             self.data.qpos[:] = qpos
 
         if qvel is not None:
             qvel = np.asarray(qvel, dtype=float)
+
             if qvel.shape != (self.model.nv,):
                 raise ValueError(f"qvel shape {qvel.shape} != ({self.model.nv},)")
+
             self.data.qvel[:] = qvel
 
         mujoco.mj_forward(self.model, self.data)
@@ -97,6 +118,17 @@ class Plant:
             qpos=self.data.qpos.copy(),
             qvel=self.data.qvel.copy(),
         )
+
+    def _link_count(self) -> int:
+        count = 0
+
+        for joint_id in range(self.model.njnt):
+            name = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_JOINT, joint_id) or ""
+
+            if name.startswith("hinge_"):
+                count += 1
+
+        return count
 
     def _object_id(self, obj_type: mujoco.mjtObj, name: str) -> int:
         obj_id = mujoco.mj_name2id(self.model, obj_type, name)

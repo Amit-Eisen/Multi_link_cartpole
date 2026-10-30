@@ -1,8 +1,11 @@
 """Continuous LQR gain against two systems with a known answer."""
 
 from __future__ import annotations
+
 import unittest
+
 import numpy as np
+
 from controllers.lqr import LQR, lqr_gain
 from sim.plant import State
 

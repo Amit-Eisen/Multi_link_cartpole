@@ -13,4 +13,5 @@ class ConstantForce:
 
     def __call__(self, state: State) -> float:
         del state
+
         return self.force
