@@ -1,4 +1,4 @@
-"""PID balance episode: gains plus the initial state."""
+"""PID balance episode: poles plus the initial state."""
 
 from __future__ import annotations
 
@@ -27,9 +27,10 @@ def load_pid(path: Path) -> tuple[Experiment, np.ndarray, float, int]:
         qvel=qvel,
         duration=float(data["duration"]),
     )
-    gain = np.atleast_2d(np.asarray(data["k"], dtype=float))
+    poles = np.asarray(data["poles"], dtype=float).reshape(-1)
+    state_size = 2 * (n_links + 1)
 
-    if gain.shape != (1, 2 * (n_links + 1)):
-        raise ValueError(f"k length must be {2 * (n_links + 1)} for {n_links} links")
+    if poles.shape != (state_size,):
+        raise ValueError(f"need {state_size} poles for {n_links} links, got {poles.shape[0]}")
 
-    return experiment, gain, float(data.get("ki", 0.0)), n_links
+    return experiment, poles, float(data.get("ki", 0.0)), n_links

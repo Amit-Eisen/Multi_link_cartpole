@@ -1,6 +1,6 @@
 # multi-link cartpole
 
-Upright cartpole in MuJoCo. Link count is a parameter, 1 to 5. Controllers so far: constant force, LQR, full-state PID.
+Upright cartpole in MuJoCo. Link count is a parameter, 1 to 5. Controllers so far: constant force, LQR, PD, PID.
 
 Upright is joint angle 0. MuJoCo owns the physics. A controller maps state to cart force. The motor limit is 50 N.
 
@@ -44,10 +44,16 @@ python scripts/lqr/run_lqr.py --config configs/lqr/balance.yaml --view
 python scripts/lqr/run_lqr.py --config configs/lqr/balance_3.yaml --view
 ```
 
-PID on the same 2-link initial state. Gains are pole placement, not the LQR gain. The log stores the commanded force and the force the plant applied.
+PID on the same 2-link initial state. The config stores poles. `K` is computed from the upright linear model when the script runs. With `ki` at 0 this is PD.
 
 ```
 python scripts/pid/run_pid.py --config configs/pid/balance.yaml --view
+```
+
+LQR and that PD on the same episodes. Three initial states, one force limit, one duration. Writes `summary.txt` and one overlaid plot per case under `results/benchmark/`.
+
+```
+python scripts/benchmark/run_benchmark.py --config configs/benchmark/two_link.yaml
 ```
 
 ## Layout
@@ -55,7 +61,7 @@ python scripts/pid/run_pid.py --config configs/pid/balance.yaml --view
 ```
 src/sim/            plant, generated MJCF, upright linearization
 src/controllers/    state -> force
-src/experiments/    episode loop, configs, settle check, plots
+src/experiments/    episode loop, metrics, plots
 configs/            numbers for a run
 scripts/            entry points
 results/            logs and plots, not committed

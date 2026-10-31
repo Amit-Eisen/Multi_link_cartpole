@@ -8,9 +8,11 @@ from pathlib import Path
 import numpy as np
 
 from controllers.pid import PID
+from controllers.place import pole_placement
 from experiments.metrics import converged
 from experiments.pid.config import load_pid
 from experiments.runner import run
+from sim.linearize import linearize
 from sim.plant import Plant, State
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -43,8 +45,10 @@ class PIDTest(unittest.TestCase):
         self.assertAlmostEqual(pid(restarted), 0.0)
 
     def test_two_link_balance_settles(self) -> None:
-        experiment, gain, ki, n_links = load_pid(ROOT / "configs" / "pid" / "balance.yaml")
+        experiment, poles, ki, n_links = load_pid(ROOT / "configs" / "pid" / "balance.yaml")
         plant = Plant(n_links=n_links)
+        model = linearize(plant)
+        gain = pole_placement(model.A, model.B, poles)
         trajectory = run(plant, PID(gain, ki=ki), experiment)
         self.assertEqual(n_links, 2)
         self.assertEqual(ki, 0.0)

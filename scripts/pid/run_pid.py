@@ -10,11 +10,13 @@ import mujoco.viewer
 import numpy as np
 
 from controllers.pid import PID
-from experiments.metrics import converged
+from controllers.place import pole_placement
+from experiments.metrics import converged, evaluate
 from experiments.pid.config import load_pid
 from experiments.plot import plot
 from experiments.runner import Experiment, run, save
 from sim.angles import absolute_link_angles
+from sim.linearize import linearize
 from sim.plant import Plant
 
 
@@ -25,18 +27,24 @@ def main() -> None:
     parser.add_argument("--view", action="store_true", help="open the MuJoCo window")
     args = parser.parse_args()
 
-    experiment, gain, ki, n_links = load_pid(args.config)
+    experiment, poles, ki, n_links = load_pid(args.config)
     plant = Plant(n_links=n_links)
+    model = linearize(plant)
+    gain = pole_placement(model.A, model.B, poles)
     policy = PID(gain, ki=ki)
     trajectory = run(plant, policy, experiment)
     stem = args.out / args.config.parent.name / experiment.name
     save(trajectory, stem.with_suffix(".npz"))
     plot(trajectory, stem.with_suffix(".png"))
-    saturated = int(np.count_nonzero(np.abs(trajectory.command) > trajectory.force_limit))
-    peak = float(np.max(np.abs(trajectory.command)))
+    metrics = evaluate(trajectory)
+    pole_row = " ".join(f"{value:.4g}" for value in poles)
+    gain_row = " ".join(f"{value:+.4f}" for value in np.ravel(gain))
+    settling = "not settled" if metrics.settling_time is None else f"{metrics.settling_time:.3f} s"
+    print(f"poles = {pole_row}")
+    print(f"K = {gain_row}")
     print(f"ki = {ki}")
-    print(f"peak command {peak:.3f} N, limit {trajectory.force_limit:.1f} N, saturated steps {saturated}")
-    print("settled" if converged(trajectory) else "not settled")
+    print(f"settling time {settling}")
+    print("final sample in band" if converged(trajectory) else "final sample outside the band")
     print(f"wrote {stem.with_suffix('.npz')} and {stem.with_suffix('.png')}")
 
     if args.view:
